@@ -142,7 +142,21 @@ Main commands:
 get software 
 ``` console
 adminuser@MyVm:~$ git clone https://github.com/ned1313/Getting-Started-Terraform.git
+```
+##### Change the Prompt to be Shorter   
+To stop the path from being long when you ls, you can shorten your Bash prompt (PS1).
+- **Use \W instead of \w**: In your `~/.bashrc`, change PS1 to show only the current directory name, not the whole path.   Example: `export PS1='\W $ '`
+- **Use PROMPT_DIRTRIM**: To keep paths long but capped, add `PROMPT_DIRTRIM=1` to your `~/.bashrc`. 
 
+```
+adminuser@MyVm:~$ ls
+Getting-Started-Terraform  wget-log  wget-log.1
+adminuser@MyVm:~$ cd Getting-Started-Terraform
+adminuser@MyVm:~/Getting-Started-Terraform$ ls
+CHANGELOG.md  README.md     commands       m4_solution  m6_solution
+LICENSE       base_web_app  globo_web_app  m5_solution  s3_bucket_create
+adminuser@MyVm:~/Getting-Started-Terraform$ cd commands
+adminuser@MyVm:~/.../commands$ 
 ```
 
  . . . . . . . . . . . . . . . . . . . [Go to Top :arrow_up:](#69)
@@ -213,7 +227,8 @@ Other Block Types
 
 ### Reviewing the Base Configuration
 ```
-adminuser@MyVm:~/Getting-Started-Terraform/base_web_app$ ls main.tf
+adminuser@MyVm:~/Getting-Started-Terraform$ cd base_web_app
+adminuser@MyVm:~/.../base_web_app$ ls
 main.tf
 ```
 [main.tf](base_web_app/main.tf)
@@ -230,10 +245,101 @@ terraform {
 ....
 ```
 
-## 3. Deploy Infrastructure with Terraform
+###### module 3
+## Deploy Infrastructure with Terraform
+
+ cd ~/Getting-Started-Terraform/base_web_app 
+
 ### Initializing the Configuration
+terraform init
+- Prepare configuration for use
+- Find required provider plug-ins
+- Configure state backend
+  - Uses working directory by default
+- Rerun when state backend, providers, or modules change
+
 ### Running Terraform Init
-### Olanning the Deployment
+[m3_commands.sh](commands/m3_commands.sh)
+``` console
+adminuser@MyVm:~/Getting-Started-Terraform$ mkdir globo_web_app
+adminuser@MyVm:~/Getting-Started-Terraform$ cp ./base_web_app/main.tf ./globo_web_app/main.tf
+adminuser@MyVm:~/Getting-Started-Terraform$ ls
+CHANGELOG.md  README.md     commands       m4_solution  m6_solution
+LICENSE       base_web_app  globo_web_app  m5_solution  s3_bucket_create
+```
+`terraform init`
+``` console
+adminuser@MyVm:~/Getting-Started-Terraform$ cd globo_web_app
+adminuser@MyVm:~/.../globo_web_app$ 
+
+adminuser@MyVm:~/.../globo_web_app$  terraform init
+Initializing the backend...
+Initializing provider plugins...
+- Finding hashicorp/aws versions matching "~> 5.0"...
+- Installing hashicorp/aws v5.100.0...
+- Installed hashicorp/aws v5.100.0 (signed by HashiCorp)
+Terraform has created a lock file .terraform.lock.hcl to record the provider
+selections it made above. Include this file in your version control repository
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.
+
+Terraform has been successfully initialized!
+
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.
+adminuser@MyVm:~/.../globo_web_app$ 
+```
+This will create a lock file
+``` console
+adminuser@MyVm:~/.../globo_web_app$  ls -a
+.  ..  .terraform  .terraform.lock.hcl  main.tf
+adminuser@MyVm:~/.../globo_web_app$  ls .terraform/providers/registry.terraform.io/hashicorp/aws
+5.100.0
+```
+
+### Planning the Deployment
+terraform plan
+- Loads configuration from working directory
+- Loads state data into memory
+- Compares configuration and state
+- Creates an execution plan
+  - Save with -out option
+
+``` console
+adminuser@MyVm:~/.../globo_web_app$ aws configure
+Command 'aws' not found, but can be installed with:
+sudo apt install awscli
+```
+Should show  `AWS Acess key ID ....`
+
+``` console
+adminuser@MyVm:~/.../globo_web_app$ terraform plan -out m3.tfplan
+
+Planning failed. Terraform encountered an error while generating this plan.
+
+```
+
+Terraform Plan Symbols
+- `+` - Resource or attribute will be created
+- `-` - Resource or attribute will be destroyed
+- `~` - Resource or attribute will be modified in place
+- `-/+` - Resource or attribute will be recreated
+
+``` console
+```
+``` console
+```
+``` console
+```
+``` console
+```
+``` console
+```
 ### Deployinh the Infrastructure
 ### Destroying the Infrastructure
 
