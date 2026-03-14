@@ -99,24 +99,44 @@ Learn about installing Terraform and using the basic command line interfaces.
     `https://developer.hashicorp.com/terraform/downloads`
 
 > Using Amazon Hand-On,  > EC2 > Instances > Connect
+> https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/concepts.html
+
+On Amazon Cloud Shell, Upload the ssh key first
+``` console
+$ chmod 400 keyvm1.pem 
+$ ssh -i keyvm1.pem ubuntu@ec2-13-220-90-17.compute-1.amazonaws.com
+ubuntu@ip-172-31-27-35:~$ 
+```
+On my mac, but on next difficult to sudo yum 
+``` console
+antw@Mac-mini terraform-getting-started % mv ~/Downloads/*.pem .
+antw@Mac-mini terraform-getting-started % chmod 400 keyvm1.pem 
+antw@Mac-mini terraform-getting-started % ssh -i keyvm1.pem ubuntu@ec2-13-220-90-17.compute-1.amazonaws.com
+```
 
 Installing terraform, from `https://developer.hashicorp.com/terraform/downloads`  
 Amazon Linux
 ``` console
-globo_web_app $  sudo yum install -y yum-utils shadow-utils
+[ec2-user@ip-172-31-29-13 ~]$  sudo yum install -y yum-utils shadow-utils
 
-globo_web_app $  sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+[ec2-user@ip-172-31-29-13 ~]$  sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
 
-globo_web_app $  sudo yum install terraform
+[ec2-user@ip-172-31-29-13 ~]$  sudo yum install terraform
 ...
-Terraform has been successfully initialized!
+Installed:
+  git-2.50.1-1.amzn2023.0.1.x86_64                      git-core-2.50.1-1.amzn2023.0.1.x86_64                 git-core-doc-2.50.1-1.amzn2023.0.1.noarch          
+  perl-Error-1:0.17029-5.amzn2023.0.2.noarch            perl-File-Find-1.37-477.amzn2023.0.7.noarch           perl-Git-2.50.1-1.amzn2023.0.1.noarch              
+  perl-TermReadKey-2.38-9.amzn2023.0.2.x86_64           perl-lib-0.65-477.amzn2023.0.7.x86_64                 terraform-1.14.7-1.x86_64                          
+
+Complete!
+[ec2-user@ip-172-31-29-13 ~]$ 
 ```
 
 ``` console
-adminuser@MyVm:~$ terraform version
+[ec2-user@ip-172-31-29-13 ~]$ terraform version
 Terraform v1.14.7
 on linux_amd64
-adminuser@MyVm:~$ terraform -h
+[ec2-user@ip-172-31-29-13 ~]$ terraform -h
 ...
 Main commands:
   init          Prepare your working directory for other commands
@@ -128,7 +148,7 @@ Main commands:
 ```
 get software 
 ``` console
-adminuser@MyVm:~$ git clone https://github.com/ned1313/Getting-Started-Terraform.git
+[ec2-user@ip-172-31-29-13 ~]$ git clone https://github.com/ned1313/Getting-Started-Terraform.git
 ```
 ##### Change the Prompt to be Shorter   
 To stop the path from being long when you ls, you can shorten your Bash prompt (PS1).
@@ -244,17 +264,16 @@ terraform init
 ### Running Terraform Init
 [m3_commands.sh](commands/m3_commands.sh)
 ``` console
-adminuser@MyVm:~/Getting-Started-Terraform$ mkdir globo_web_app
-adminuser@MyVm:~/Getting-Started-Terraform$ cp ./base_web_app/main.tf ./globo_web_app/main.tf
-adminuser@MyVm:~/Getting-Started-Terraform$ ls
-CHANGELOG.md  README.md     commands       m4_solution  m6_solution
-LICENSE       base_web_app  globo_web_app  m5_solution  s3_bucket_create
+[ec2-user@ip-172-31-29-13 Getting-Started-Terraform]$ mkdir globo_web_app
+[ec2-user@ip-172-31-29-13 Getting-Started-Terraform]$ cp ./base_web_app/main.tf ./globo_web_app/main.tf
+[ec2-user@ip-172-31-29-13 Getting-Started-Terraform]$ ls
+CHANGELOG.md  LICENSE  README.md  base_web_app  commands  globo_web_app  m4_solution  m5_solution  m6_solution  s3_bucket_create
 ```
 `terraform init`
 ``` console
-adminuser@MyVm:~/Getting-Started-Terraform$ cd globo_web_app
+[ec2-user@ip-172-31-29-13 Getting-Started-Terraform]$ cd globo_web_app
 
-globo_web_app$  terraform init
+[ec2-user@ip-172-31-29-13 globo_web_app]$ terraform init
 Initializing the backend...
 Initializing provider plugins...
 - Finding hashicorp/aws versions matching "~> 5.0"...
@@ -274,13 +293,12 @@ should now work.
 If you ever set or change modules or backend configuration for Terraform,
 rerun this command to reinitialize your working directory. If you forget, other
 commands will detect it and remind you to do so if necessary.
-globo_web_app$ 
 ```
 This will create a lock file
 ``` console
-globo_web_app$  ls -a
+[ec2-user@ip-172-31-29-13 globo_web_app]$ ls -a
 .  ..  .terraform  .terraform.lock.hcl  main.tf
-globo_web_app $ ls .terraform/providers/registry.terraform.io/hashicorp/aws
+[ec2-user@ip-172-31-29-13 globo_web_app]$ ls .terraform/providers/registry.terraform.io/hashicorp/aws
 5.100.0
 ```
 
@@ -293,16 +311,16 @@ terraform plan
   - Save with -out option
 
 ``` console
-globo_web_app $ aws configure
+[ec2-user@ip-172-31-29-13 globo_web_app]$ aws configure
 AWS Access Key ID [****************SVV3]: 
 AWS Secret Access Key [****************Zoqp]: 
 Default region name [None]: 
 Default output format [None]: 
-globo_web_app $ 
+...
 ```
 run the plan command to see what Terraform will do.
 ``` console
-globo_web_app $ terraform plan -out m3.tfplan
+[ec2-user@ip-172-31-29-13 globo_web_app]$  terraform plan -out m3.tfplan
 data.aws_ssm_parameter.amzn2_linux: Reading...
 ...
 Plan: 7 to add, 0 to change, 0 to destroy.
@@ -318,12 +336,11 @@ Terraform Plan Symbols
 
 Check out the plan
 ``` console
-globo_web_app $ terraform show m3.tfplan
+[ec2-user@ip-172-31-29-13 globo_web_app]$  terraform show m3.tfplan
 
 Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
 ...
 Plan: 7 to add, 0 to change, 0 to destroy.
-globo_web_app $ 
 ```
 
 ### Deploying the Infrastructure
@@ -351,7 +368,7 @@ Apply cancelled.
 
 Now use the plan file to apply the changes.
 ``` console
-globo_web_app $ terraform apply m3.tfplan
+[ec2-user@ip-172-31-29-13 globo_web_app]$  terraform apply m3.tfplan
 aws_vpc.app: Creating...
 aws_vpc.app: Still creating... [00m10s elapsed]
 aws_vpc.app: Creation complete after 12s [id=vpc-0a7ef1988f9414c73]
@@ -371,7 +388,6 @@ aws_instance.nginx1: Still creating... [00m10s elapsed]
 aws_instance.nginx1: Creation complete after 13s [id=i-0d9369e1a397cd6c3]
 
 Apply complete! Resources: 7 added, 0 changed, 0 destroyed.
-globo_web_app $ 
 ```
 Grab the Public IP Address from the Instances (without name). In the browser: http://34.239.124.4/
 
@@ -384,7 +400,7 @@ terraform destroy
 
 If you are done, you can tear things down to save $$
 ``` console
-globo_web_app $ terraform destroy
+[ec2-user@ip-172-31-29-13 globo_web_app]$  terraform destroy
 aws_vpc.app: Refreshing state... [id=vpc-0a7ef1988f9414c73]
 data.aws_ssm_parameter.amzn2_linux: Reading...
 ...
@@ -397,7 +413,7 @@ Do you really want to destroy all resources?
   Enter a value: yes
 ...
 Destroy complete! Resources: 7 destroyed.
-globo_web_app $ 
+[ec2-user@ip-172-31-29-13 globo_web_app]$
 ```
 
 ## 4. Using Inputs and Outputs
