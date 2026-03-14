@@ -98,31 +98,18 @@ Learn about installing Terraform and using the basic command line interfaces.
   - You can find the installer info for Terraform here:
     `https://developer.hashicorp.com/terraform/downloads`
 
-> Using Azure Hand-On, 
-``` console
-cloud [ ~ ]$  RGROUP='1-8c47860b-playground-sandbox'
-az vm create \
-    --resource-group $RGROUP \
-    --name MyVm \
-    --image Ubuntu2404 \
-    --size Standard_D2s_v5 \
-    --admin-username adminuser \
-    --generate-ssh-keys \
-    --location eastus
+> Using Amazon Hand-On,  > EC2 > Instances > Connect
 
-cloud [ ~ ]$  ssh adminuser@52.240.54.93
-adminuser@MyVm:~$ 
-```
-Installing terraform, from `https://developer.hashicorp.com/terraform/downloads`
+Installing terraform, from `https://developer.hashicorp.com/terraform/downloads`  
+Amazon Linux
 ``` console
-adminuser@MyVm:~$ 
-wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-sudo apt update && sudo apt install terraform
+globo_web_app $  sudo yum install -y yum-utils shadow-utils
 
+globo_web_app $  sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+
+globo_web_app $  sudo yum install terraform
 ...
-Unpacking terraform (1.14.7-1) ...
-Setting up terraform (1.14.7-1) ...
+Terraform has been successfully initialized!
 ```
 
 ``` console
@@ -149,14 +136,10 @@ To stop the path from being long when you ls, you can shorten your Bash prompt (
 - **Use PROMPT_DIRTRIM**: To keep paths long but capped, add `PROMPT_DIRTRIM=1` to your `~/.bashrc`. 
 
 ```
-adminuser@MyVm:~$ ls
-Getting-Started-Terraform  wget-log  wget-log.1
-adminuser@MyVm:~$ cd Getting-Started-Terraform
-adminuser@MyVm:~/Getting-Started-Terraform$ ls
-CHANGELOG.md  README.md     commands       m4_solution  m6_solution
-LICENSE       base_web_app  globo_web_app  m5_solution  s3_bucket_create
-adminuser@MyVm:~/Getting-Started-Terraform$ cd commands
-adminuser@MyVm:~/.../commands$ 
+$ cat ~/.bashrc
+$ sudo tee -a ~/.bashrc << EOF
+PROMPT_DIRTRIM=1
+EOF
 ```
 
  . . . . . . . . . . . . . . . . . . . [Go to Top :arrow_up:](#69)
@@ -270,9 +253,8 @@ LICENSE       base_web_app  globo_web_app  m5_solution  s3_bucket_create
 `terraform init`
 ``` console
 adminuser@MyVm:~/Getting-Started-Terraform$ cd globo_web_app
-adminuser@MyVm:~/.../globo_web_app$ 
 
-adminuser@MyVm:~/.../globo_web_app$  terraform init
+globo_web_app$  terraform init
 Initializing the backend...
 Initializing provider plugins...
 - Finding hashicorp/aws versions matching "~> 5.0"...
@@ -292,13 +274,13 @@ should now work.
 If you ever set or change modules or backend configuration for Terraform,
 rerun this command to reinitialize your working directory. If you forget, other
 commands will detect it and remind you to do so if necessary.
-adminuser@MyVm:~/.../globo_web_app$ 
+globo_web_app$ 
 ```
 This will create a lock file
 ``` console
-adminuser@MyVm:~/.../globo_web_app$  ls -a
+globo_web_app$  ls -a
 .  ..  .terraform  .terraform.lock.hcl  main.tf
-adminuser@MyVm:~/.../globo_web_app$  ls .terraform/providers/registry.terraform.io/hashicorp/aws
+globo_web_app $ ls .terraform/providers/registry.terraform.io/hashicorp/aws
 5.100.0
 ```
 
@@ -311,17 +293,21 @@ terraform plan
   - Save with -out option
 
 ``` console
-adminuser@MyVm:~/.../globo_web_app$ aws configure
-Command 'aws' not found, but can be installed with:
-sudo apt install awscli
+globo_web_app $ aws configure
+AWS Access Key ID [****************SVV3]: 
+AWS Secret Access Key [****************Zoqp]: 
+Default region name [None]: 
+Default output format [None]: 
+globo_web_app $ 
 ```
-Should show  `AWS Acess key ID ....`
-
+run the plan command to see what Terraform will do.
 ``` console
-adminuser@MyVm:~/.../globo_web_app$ terraform plan -out m3.tfplan
+globo_web_app $ terraform plan -out m3.tfplan
+data.aws_ssm_parameter.amzn2_linux: Reading...
+...
+Plan: 7 to add, 0 to change, 0 to destroy.
 
-Planning failed. Terraform encountered an error while generating this plan.
-
+Saved the plan to: m3.tfplan
 ```
 
 Terraform Plan Symbols
@@ -330,18 +316,89 @@ Terraform Plan Symbols
 - `~` - Resource or attribute will be modified in place
 - `-/+` - Resource or attribute will be recreated
 
+Check out the plan
 ``` console
+globo_web_app $ terraform show m3.tfplan
+
+Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
+...
+Plan: 7 to add, 0 to change, 0 to destroy.
+globo_web_app $ 
 ```
+
+### Deploying the Infrastructure
+terraform apply
+- Accepts a saved plan file
+- Executes changes from plan
+- Updates state data contents
+- Generates a plan if none submitted
+
+apply without any options first to see the interactive prompt
 ``` console
+globo_web_app $ terraform apply
+data.aws_ssm_parameter.amzn2_linux: Reading...
+...
+Plan: 7 to add, 0 to change, 0 to destroy.
+
+Do you want to perform these actions?
+  Terraform will perform the actions described above.
+  Only 'yes' will be accepted to approve.
+
+  Enter a value: no
+
+Apply cancelled.
 ```
+
+Now use the plan file to apply the changes.
 ``` console
+globo_web_app $ terraform apply m3.tfplan
+aws_vpc.app: Creating...
+aws_vpc.app: Still creating... [00m10s elapsed]
+aws_vpc.app: Creation complete after 12s [id=vpc-0a7ef1988f9414c73]
+aws_subnet.public_subnet1: Creating...
+aws_internet_gateway.app: Creating...
+aws_security_group.nginx_sg: Creating...
+aws_internet_gateway.app: Creation complete after 0s [id=igw-04a9a30b913e5f67a]
+aws_route_table.app: Creating...
+aws_route_table.app: Creation complete after 1s [id=rtb-0842b8c22ad20f2a0]
+aws_security_group.nginx_sg: Creation complete after 3s [id=sg-0f044570db659a985]
+aws_subnet.public_subnet1: Still creating... [00m10s elapsed]
+aws_subnet.public_subnet1: Creation complete after 11s [id=subnet-0a3fe6738bdeb4089]
+aws_route_table_association.app_subnet1: Creating...
+aws_instance.nginx1: Creating...
+aws_route_table_association.app_subnet1: Creation complete after 0s [id=rtbassoc-03e082c212525c6c4]
+aws_instance.nginx1: Still creating... [00m10s elapsed]
+aws_instance.nginx1: Creation complete after 13s [id=i-0d9369e1a397cd6c3]
+
+Apply complete! Resources: 7 added, 0 changed, 0 destroyed.
+globo_web_app $ 
 ```
-``` console
-```
-``` console
-```
-### Deployinh the Infrastructure
+Grab the Public IP Address from the Instances (without name). In the browser: http://34.239.124.4/
+
 ### Destroying the Infrastructure
+terraform destroy
+- Destroys all resources from state
+- Use caution!
+- Alias for `terraform apply -destroy`
+- Create plan with `terraform plan -destroy`
+
+If you are done, you can tear things down to save $$
+``` console
+globo_web_app $ terraform destroy
+aws_vpc.app: Refreshing state... [id=vpc-0a7ef1988f9414c73]
+data.aws_ssm_parameter.amzn2_linux: Reading...
+...
+Plan: 0 to add, 0 to change, 7 to destroy.
+
+Do you really want to destroy all resources?
+  Terraform will destroy all your managed infrastructure, as shown above.
+  There is no undo. Only 'yes' will be accepted to confirm.
+
+  Enter a value: yes
+...
+Destroy complete! Resources: 7 destroyed.
+globo_web_app $ 
+```
 
 ## 4. Using Inputs and Outputs
 ### Globomantics Scenario
