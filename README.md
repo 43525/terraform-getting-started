@@ -19,7 +19,8 @@ When you're finished with this course, you'll have the base knowledge required t
 6. Exploring Terraform State
 
  . . . . . . . . . . . . . . . . . . . [Go to Top :arrow_up:](#69)
-## 1. Introducing Iac and Terraform
+###### module 1
+## Introducing Iac and Terraform
 ### Iac Fundamentals
 Provisioning instrastructure through software to achieve consistent and preditable environments.
 
@@ -138,13 +139,96 @@ Main commands:
   destroy       Destroy previously-created infrastructure
 ...
 ```
+get software 
+``` console
+adminuser@MyVm:~$ git clone https://github.com/ned1313/Getting-Started-Terraform.git
 
-## 2. Terraform Configuration Files and Syntax
-### Globomabtics Scenario
+```
+
+ . . . . . . . . . . . . . . . . . . . [Go to Top :arrow_up:](#69)
+###### module 2
+## Terraform Configuration Files and Syntax
+### Globomantics Scenario
+The best way to learn is to start with a real‑world example. 
+
+For this course, pretend that you've just started as an IT ops admin at Globomantics, a global risk assessment company.
+
+For the moment, the application is a basic web app running on a virtual machine. 
+Globomantics has recently started using AWS for deploying new applications, and you've been asked to spin up this environment in the us‑east‑1 region. 
+
+This seems like an ideal project to take Terraform for a test run. 
+In fact, Sally has already found a basic Terraform deployment file she thinks you could get started with. 
+
+The base configuration Sally found includes the following infrastructure components. 
+In the us‑east‑1 region of AWS, a VPC with a single public subnet, and inside that subnet is a single EC2 instance that's running NGINX as a web server. 
+The configuration also includes all the necessary routing resources and a security group to allow web traffic to reach the web server. 
+
 ### Terraform Configurations
+
+Terraform Configuration Files
+- Terraform looks for all the files in the current working directory that have the file extension .tf.json.
+- Terraform does not look for additional files in subdirectories,
+
+HashiCorp Configuration Language
+- Human readable and writable
+- Comment support
+- Functions and complex expressions
+
 ### Terraform Objects and Blocks
+Block Syntax
+```
+block_type "label" "label" {
+  argument_name = expression
+  nested_block {
+    argument_name = expression
+  }
+}
+```
+Use in aws
+``` tf
+resource "aws_instance" "web_server" {
+  name = "web-server"
+  ebs_volume {
+    size == 40
+  }
+}
+```
+Terraform Object Reference  
+<resource_type>.<name_label>.<attribute>  
+aws_instance.web_server.name
+
+ref: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/instance
+
 ### Terraform Block Types
-### Terraform the Base Configuration
+Terraform Block Types
+- Terraform
+- Providers
+- Resources
+- Data sources
+
+Other Block Types
+- Variable
+- Output
+- Local
+
+### Reviewing the Base Configuration
+```
+adminuser@MyVm:~/Getting-Started-Terraform/base_web_app$ ls main.tf
+main.tf
+```
+[main.tf](base_web_app/main.tf)
+``` tf
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+....
+```
 
 ## 3. Deploy Infrastructure with Terraform
 ### Initializing the Configuration
