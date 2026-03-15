@@ -999,9 +999,272 @@ Clickable Browser ipaddr: http://ec2-100-30-238-205.compute-1.amazonaws.com:80
 ###### module 6
 ## Exploring Terraform State
 ### What's is Terraform State?
+You can think of state as Terraform's memory. 
+State data contains entries for your resources, data sources, and outputs. 
+State data is what maps the resources and data sources in your configuration to the target environment.
+
+Within state data, each resource and data source is mapped from the identifier in the configuration to a unique value for that object in the real world. 
+The unique identifier depends on the object type. 
+For instance, the AWS instance resource uses the EC2 instance ID. 
+Also included are all the attributes of the resource or the data source. 
+
+Outputs hold the output name and the value associated with that output. 
+The state data also contains metadata about the version of Terraform used, the version of the state data format, and the serial number of the current state data. 
+These are internal implementation details that you don't need to worry about. 
+
+Terraform state data is stored in a JSON format.
+
+Each time Terraform generates an execution plan, it loads the configuration and state data into memory and refreshes the attribute values for resources and data sources by querying the deployment environment. 
+Then it compares the contents of state data and the contents of the configuration.
+Terraform's goal is to make state match the desired configuration. 
+
+The output of this process is the execution plan with the necessary changes. 
+When Terraform is executing an operation that interacts with state data like a Terraform plan or an apply, it places a lock on the data so no other instance of Terraform can make changes. 
+
+Imagine if the state data was in a shared location and two admins tried to make conflicting changes at the same time. 
+That's not good. Locking prevents that situation from arising. 
+If the state is currently locked, Terraform will let you know and provide information about the lock, like who placed it and when it was placed. 
+
 ### State Storage Options
+Backend Options
+- Local backend
+  - Default setting
+- Remote backend
+  - S3, Azure Storage, Google CLoud Storage
+  - HCP Terraform and consul
+- Features
+  - Locking
+  - Workspaces
+- Data encryption
+- Access control
+
+Backend Block, backend.tf
+```
+terraform {
+  backend "backend_type" {
+    IDENTIFIER = LITERAL_VALUE
+  }
+}
+```
+Example
+```
+terraform {
+  backend "s3" {
+    bucket      = "globo-state-1234"
+    key         = "dev/terraform.tfsate"
+    region      = "us-east-1"
+    access_key  = "HSGDGSJD"
+    secret_key  = "aadasdasd"
+  }
+}
+```
+Some settings like the access_key, secret_key, and region can be sourced from environment variables or AWS CLI settings, so we can remove those three from the block.
+You may also not know the exact details of the back end or want to make the configuration reusable across multiple environments. 
+Instead of hard coding any of the information, we can instead supply the values as part of the terraform init command. 
+What we're left with is just a backend block of type s3. This is called a partial configuration. 
+```
+terraform {
+  backend "s3" {
+    bucket      = "globo-state-1234"
+    key         = "dev/terraform.tfsate"
+  }
+}
+```
+Partial Configuration  
+- Using in-line settings
+  - terraform init -backend-config="bucket=globo-state-12345"
+- Using a backend config file
+  - terraform init -backend-config="backend-settings.txt"
+
 ### Globomantics Scenario and State Manipulation
+State Data Migration
+- Use S3 bucket provided by Ops
+- Migrate existing state data
+- Use a partial configuration
+
+State Inspection Commands
+- Display all state data
+  - terraform show
+- List all resources and data sources
+  - terraform state list
+- List all attributes of a single object
+  - terraform state show ADDR
+  - terraform state show aws_vps.main
+- Show outputs stored in state
+  - terraform output NAME
+
+Moved Block, moved.tf
+```
+moved {
+  from = ADDRESS
+  to = ADDRESS
+}
+```
+Import BLock, imports.tf
+```
+import {
+  to = ADDRESS
+  id = "UNIQUE_IDENTIFIER"
+}
+```
+Removed Block, removed.tf
+```
+removed {
+  from = ADDRESS
+
+  lifecycle {
+    prevent_destroy = false
+  }
+}
+```
+
 ### Migrating State Data
+``` console
+[ec2-user@ip-172-31-29-4 globo_web_app]$ cd ..
+[ec2-user@ip-172-31-29-4 Getting-Started-Terraform]$ cd s3_bucket_create
+[ec2-user@ip-172-31-29-4 s3_bucket_create]$
+```
+# Initialize and apply the S3 bucket
+``` console
+[ec2-user@ip-172-31-29-4 s3_bucket_create]$ terraform init
+
+[ec2-user@ip-172-31-29-4 s3_bucket_create]$ terraform plan -out bucket.tfplan
+
+[ec2-user@ip-172-31-29-4 s3_bucket_create]$ terraform apply bucket.tfplan
+...
+bucket_name = "taco-wagon20260315162550405300000001"
+bucket_region = "us-east-1"
+[ec2-user@ip-172-31-29-4 s3_bucket_create]$ 
+```
+`vim terraform.tf` , cut and paste from main.tf. And add bucket "s3"
+``` tf
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+  # ??? need video again
+  #backend "s3" {
+  #  bucket = "taco-wagon20260315162550405300000001"
+  #  region = "us-east-1"
+  #}
+}
+```
+vim main.tf
+```
+#terraform {
+#  required_providers {
+#    aws = {
+#      source  = "hashicorp/aws"
+#      version = "~> 5.0"
+#    }
+#  }
+#}
+```
+
+`cd ../globo_web_app`  
+`terraform show`
+``` console
+[ec2-user@ip-172-31-29-4 s3_bucket_create]$ cd ../globo_web_app
+[ec2-user@ip-172-31-29-4 globo_web_app]$ terraform show
+...
+Outputs:
+
+aws_instance_public_dns = "http://ec2-3-239-246-204.compute-1.amazonaws.com:80"
+public_subnet_id = "subnet-068132660411cf68e"
+vpc_id = "vpc-04a91dea284a7f04d"
+```
+`terraform state list`
+``` console
+[ec2-user@ip-172-31-29-4 globo_web_app]$ terraform state list
+data.aws_ssm_parameter.amzn2_linux
+aws_instance.nginx1
+aws_internet_gateway.app
+aws_route_table.app
+aws_route_table_association.app_subnet1
+aws_security_group.nginx_sg
+aws_subnet.public_subnet1
+aws_vpc.app
+[ec2-user@ip-172-31-29-4 globo_web_app]$ terraform state show aws_instance.nginx1
+```
+Migrating
+
+`cd ../s3_bucket_create` `vim terraform.tf` , uncommenting bucket "s3"
+
+`cd ../globo_web_app` ?? 
+``` tf
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+
+  backend "s3" {
+    bucket = "taco-wagon20260315162550405300000001"
+    region = "us-east-1"
+  }
+}
+```
+`cd ../globo_web_app`  
+update the globo_web_app backend to use the S3 bucket
+``` console
+[ec2-user@ip-172-31-29-4 globo_web_app]$ terraform init -backend-config="key=dev.tfstate"
+Initializing the backend...
+Do you want to copy existing state to the new backend?
+  Pre-existing state was found while migrating the previous "local" backend to the
+  newly configured "s3" backend. No existing state was found in the newly
+  configured "s3" backend. Do you want to copy this state to the new "s3"
+  backend? Enter "yes" to copy and "no" to start with an empty state.
+
+  Enter a value: yes
+
+
+Successfully configured the backend "s3"! Terraform will automatically
+use this backend unless the backend configuration changes.
+Initializing provider plugins...
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Using previously-installed hashicorp/aws v5.100.0
+
+Terraform has been successfully initialized!
+
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.
+[ec2-user@ip-172-31-29-4 globo_web_app]$ 
+```
+To confirm
+- terraform.tfstate will be empty
+- terraform show, we[ll get valid response
+-  terraform plan
+
+``` console
+[ec2-user@ip-172-31-29-4 globo_web_app]$ terraform plan
+...
+No changes. Your infrastructure matches the configuration.
+
+Terraform has compared your real infrastructure against your configuration and found no differences,
+so no changes are needed.
+```
+
+Tear down the deployments to save costs  
+Globo Web App first  
+```
+terraform destroy -auto-approve
+```
+Then the S3 bucket
+```
+cd ../s3_bucket_create
+terraform destroy -auto-approve
+```
+
 ### Next Steps
 
 ---
