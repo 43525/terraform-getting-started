@@ -11,12 +11,12 @@ First, you'll discover what infrastructure as code is and how Terraform implemen
 Next, you’ll explore Terraform configuration files and the workflow for deploying infrastructure using Terraform. Finally, you’ll learn how Terraform state supports managing the full lifecycle of your infrastructure. 
 When you're finished with this course, you'll have the base knowledge required to get started with using Terraform.
 
-1. Introducing Iac and Terraform
-2. Terraform Configuration Files and Syntax
-3. Deploy Infrastructure with Terraform
-4. Using Inputs and Outputs
-5. Using Expressions and Functions
-6. Exploring Terraform State
+1. [Introducing Iac and Terraform](#module-1)
+2. [Terraform Configuration Files and Syntax](#module-2)
+3. [Deploy Infrastructure with Terraform](#module-3)
+4. [Using Inputs and Outputs](#module-4)
+5. [Using Expressions and Functions](#module-5)
+6. [Exploring Terraform State](#module-6)
 
  . . . . . . . . . . . . . . . . . . . [Go to Top :arrow_up:](#69)
 ###### module 1
@@ -100,7 +100,9 @@ Learn about installing Terraform and using the basic command line interfaces.
 
 > Using Amazon Hand-On  
 > [Tutorial 2: Launch a test EC2 instance and connect to it]( https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/tutorial-launch-a-test-ec2-instance.html)  
-> Create key pair > ED25519 for Linux
+> 1. EC2 > Create key pair, Name: `keyvm1` > Key pair type: ED25519 for Linux > `mv ~/Downloads/*.pem .`
+> 2. EC2 > Instances > Launch Instances > Name: `My Vm1` > Amazon Linux >Key Pair: keyvm1 > Launch
+> 3. Click the instance (i-076f3edbde4bb4283) > Connect > ssh ...
 
 On Amazon Cloud Shell, Upload the ssh key first
 ``` console
@@ -149,7 +151,8 @@ Main commands:
 ```
 0️⃣  **`git clone https://github.com/ned1313/Getting-Started-Terraform.git`**
 ``` console
-[ec2-user@ip-172-31-29-13 ~]$ git clone https://github.com/ned1313/Getting-Started-Terraform.git
+[ec2-user@ip-172-31-29-4 ~]$  git clone https://github.com/ned1313/Getting-Started-Terraform.git
+[ec2-user@ip-172-31-29-4 ~]$  cd Getting-Started-Terraform
 ```
 
 #### Change the Prompt to be Shorter   
@@ -250,6 +253,7 @@ terraform {
 ....
 ```
 
+ . . . . . . . . . . . . . . . . . . . [Go to Top :arrow_up:](#69)
 ###### module 3
 ## Deploy Infrastructure with Terraform
 
@@ -270,11 +274,10 @@ terraform init
 [ec2-user@ip-172-31-29-13 Getting-Started-Terraform]$ cp ./base_web_app/main.tf ./globo_web_app/main.tf
 [ec2-user@ip-172-31-29-13 Getting-Started-Terraform]$ ls
 CHANGELOG.md  LICENSE  README.md  base_web_app  commands  globo_web_app  m4_solution  m5_solution  m6_solution  s3_bucket_create
+[ec2-user@ip-172-31-29-13 Getting-Started-Terraform]$  cd globo_web_app
 ```
 2️⃣ **`terraform init`**
 ``` console
-[ec2-user@ip-172-31-29-13 Getting-Started-Terraform]$ cd globo_web_app
-
 [ec2-user@ip-172-31-29-13 globo_web_app]$ terraform init
 Initializing the backend...
 Initializing provider plugins...
@@ -418,8 +421,9 @@ Do you really want to destroy all resources?
 Destroy complete! Resources: 7 destroyed.
 [ec2-user@ip-172-31-29-13 globo_web_app]$
 ```
-
-## 4. Using Inputs and Outputs
+ . . . . . . . . . . . . . . . . . . . [Go to Top :arrow_up:](#69)
+###### module 4
+## Using Inputs and Outputs
 ### Globomantics Scenario
 Sally Sue is excited that you got the environment up so quickly, but the folks over in ops have some requests about how the environment is deployed. 
 
@@ -532,7 +536,7 @@ variable "ec2_instance_type" {
   type        = string
 }
 ```
-main.tf
+`vim main.tf`
 ``` tf
 provider "aws" {
   region     = var.aws_region
@@ -706,9 +710,11 @@ public_subnet_id = "subnet-093d3778e1a9140ec"
 vpc_id = "vpc-0da49c10f750b657c"
 [ec2-user@ip-172-31-19-92 globo_web_app]$ 
 ```
-> http://3.84.207.158/ not working
+> http://3.84.207.158/ not working  
 
-## 5. Using Expressions and Functions
+  . . . . . . . . . . . . . . . . . . . [Go to Top :arrow_up:](#69)
+###### module 5
+## Using Expressions and Functions
 ### Globomantics Scenario
 Potential Improvement
 - Default tags and naming convention
@@ -806,7 +812,7 @@ locals {
     Environment = var.environment
     BillingCode = var.billing_code
   }
-  prefix = "${var.project}-${var.environment}"
+  naming_prefix = "${var.project}-${var.environment}"
 }
 ```
 
@@ -873,7 +879,7 @@ Function to Use (for Globomantics)
 [ec2-user@ip-172-31-19-92 globo_web_app]$ 
 ```
 
-### Adding Functions to the COnfiguration
+### Adding Functions to the Configuration
 ``` console
 [ec2-user@ip-172-31-19-92 globo_web_app]$ mkdir templates
 [ec2-user@ip-172-31-19-92 globo_web_app]$ cd templates
@@ -907,7 +913,7 @@ resource "aws_vpc" "app" {
   cidr_block           = var.vpc_cidr_block
   enable_dns_hostnames = var.vpc_enable_dns_hostnames
 
-  tags = merge(local.common_tags, { Name = lower("${local.prefix}-vpc") })
+  tags = merge(local.common_tags, { Name = lower("${local.naming_prefix}-vpc") })
 }
 ...
   user_data_replace_on_change = true
@@ -917,7 +923,6 @@ resource "aws_vpc" "app" {
     environment = var.environment
   })
 
- # tags = local.common.tags
 }
 ```
 ``` console
@@ -987,9 +992,12 @@ public_subnet_id = "subnet-05158e5b5e97065a5"
 vpc_id = "vpc-0822023bc137ffbfd"
 [ec2-user@ip-172-31-19-92 globo_web_app]$
 ```
-Clickable Browser ipaddr: http://ec2-100-30-238-205.compute-1.amazonaws.com:80
+Clickable Browser ipaddr: http://ec2-100-30-238-205.compute-1.amazonaws.com:80  
+> Welcome to the dev website! Have a 🌮
 
-## 6. Exploring Terraform State
+ . . . . . . . . . . . . . . . . . . . [Go to Top :arrow_up:](#69)
+###### module 6
+## Exploring Terraform State
 ### What's is Terraform State?
 ### State Storage Options
 ### Globomantics Scenario and State Manipulation
