@@ -708,15 +708,286 @@ vpc_id = "vpc-0da49c10f750b657c"
 ```
 > http://3.84.207.158/ not working
 
-
 ## 5. Using Expressions and Functions
 ### Globomantics Scenario
+Potential Improvement
+- Default tags and naming convention
+- Move startup script to a file
+- Make public DNS a ful URL
+
 ### Local Values
+- Internal temporary values
+- Replace repeated values
+- Data transformtaion
+
+Locals Syntax, main.tf
+```
+locals {
+  key = value
+}
+```
+Example
+```
+locals {
+  instance_prefix = "globo"
+  common_tags = {
+    company      = "Globomantics"
+    project      = var.project
+    billing_code = var.billing.code
+  }
+}
+```
+Terraform Locals Reference
+- local.<key>
+- local.instance_prefix
+- local.common_tags.company
+
 ### Adding Locals
+Globomantics needs common tags on all resources and a naming prefix. They want four tags, 
+
+Common Tags
+- Company (Globomantics)
+- Project
+- Environment
+- BillingCode
+
+Variables to Create
+- Company
+- Project
+- Environment
+- Billing code
+
+Added these variables into the configuration  
+`[ec2-user@ip-172-31-19-92 globo_web_app]$ vim variables.tf`
+``` tf
+...
+variable "company_name" {
+  description = "The name of the company"
+  type        = string
+  default     = "Globomantics"
+}
+
+variable "project" {
+  description = "The name of the project"
+  type        = string
+}
+
+variable "environment" {
+  description = "The environment for the deployment (e.g., dev, staging, prod)"
+  type        = string
+}
+
+variable "billing_code" {
+  description = "The billing code for the project"
+  type        = string
+}
+```
+
+Interpolation, `${var.project}-${var.environment}`  
+Interpolation is a way to ask Terraform to evaluate an expression and turn the result into a string. 
+We already have quotes here indicating that we're constructing a string. 
+
+Inside the string, we first want to add a reference to the project.
+We do that by adding a dollar sign and then curly braces. 
+Inside the curly braces, I'll put var.project. 
+This syntax tells Terraform that it should take whatever it finds between the curly braces, interpret the expression, and render it as a string. 
+
+Next, we're going to add a dash after the curly braces and another reference to the environment value stored in the variable environment. 
+Now we've created a string from our two variables that is of the form project‑environment. 
+With our common_tags local value defined, let's apply these tags to our resources. 
+
+Added these variable to local.tf   
+`[ec2-user@ip-172-31-19-92 globo_web_app]$ vim locals.tf`
+``` tf
+locals {
+  common_tags = {
+    Company     = var.company_name
+    Project     = var.project
+    Environment = var.environment
+    BillingCode = var.billing_code
+  }
+  prefix = "${var.project}-${var.environment}"
+}
+```
+
+Added into main.tf  
+`[ec2-user@ip-172-31-19-92 globo_web_app]$ vim main.tf`
+```
+# NETWORKING #
+resource "aws_vpc" "app" {
+  cidr_block           = var.vpc_cidr_block
+  enable_dns_hostnames = var.vpc_enable_dns_hostnames
+
+  tags = local.common_tags
+}
+```
+Note that the aws_route_table_association resource doesn't support tags, so skip that one. 
+
+Add variables into terraform.tfvars  
+`[ec2-user@ip-172-31-19-92 globo_web_app]$ vim terraform.tfvars`
+``` tf
+http_port         = 80
+ec2_instance_type = "t3.micro"
+project           = "tacowagon"
+environment       = "dev"
+billing_code      = "8675309"
+```
+
 ### Functions and Expressions
+Terraform Expressions
+- Literal expressions
+- Object or attribute references
+- Arithmetic and logical operators
+- Conditional expressions
+- For expressions
+
+Terraform Functions
+- Built-in to Terraform
+  - func_name(arg1, arg2, arg3, ...)
+- Grouped by category
+
+Function to Use (for Globomantics)
+- Startup script
+  - templatefile(file_path, { map of variables })
+- Consisten naming
+  - lower(local.naming_prefix)
+- Add tags to common tags
+  - merge(local.common.tags, { map of additional tags})
+
 ### Testing Functions with Terraform Console
+**`terraform console`**, exit by ctrl-d
+```
+[ec2-user@ip-172-31-19-92 globo_web_app]$ terraform console
+> min(4,5,16)
+4
+> lower("TACOCAT")
+"tacocat"
+> local.common_tags
+{
+  "BillingCode" = "8675309"
+  "Company" = "Globomantics"
+  "Environment" = "dev"
+  "Project" = "tacowagon"
+}
+> exit
+[ec2-user@ip-172-31-19-92 globo_web_app]$ 
+```
+
 ### Adding Functions to the COnfiguration
+``` console
+[ec2-user@ip-172-31-19-92 globo_web_app]$ mkdir templates
+[ec2-user@ip-172-31-19-92 globo_web_app]$ cd templates
+[ec2-user@ip-172-31-19-92 templates]$ vim startup_script.tpl
+```
+startup_script, moves from the man.tf, but add in te placeholder
+``` bash
+#! /bin/bash
+sudo amazon-linux-extras install -y nginx1
+sudo service nginx start
+sudo rm /usr/share/nginx/html/index.html
+sudo cat > /usr/share/nginx/html/index.html << 'WEBSITE'
+<html>
+<head>
+    <title>Taco Team Server - ${environment}</title>
+</head>
+<body style="background-color:#1F778D">
+    <p style="text-align: center;">
+        <span style="color:#FFFFFF;">
+            <span style="font-size:100px;">Welcome to the ${environment} website! Have a &#127790;</span>
+        </span>
+    </p>
+</body>
+</html>
+WEBSITE
+```
+main.tf
+``` tf
+...
+resource "aws_vpc" "app" {
+  cidr_block           = var.vpc_cidr_block
+  enable_dns_hostnames = var.vpc_enable_dns_hostnames
+
+  tags = merge(local.common_tags, { Name = lower("${local.prefix}-vpc") })
+}
+...
+  user_data_replace_on_change = true
+ # tags                        = merge(local.common_tags, { Name = lower("${local.naming_prefix}-nginx1") })
+
+  user_data = templatefile("./templates/startup_script.tpl", {
+    environment = var.environment
+  })
+
+ # tags = local.common.tags
+}
+```
+``` console
+[ec2-user@ip-172-31-19-92 globo_web_app]$ terraform console
+> merge(local.common_tags, { Name = lower("${local.prefix}-vpc") })
+{
+  "BillingCode" = "8675309"
+  "Company" = "Globomantics"
+  "Environment" = "dev"
+  "Name" = "tacowagon-dev-vpc"
+  "Project" = "tacowagon"
+}
+>  
+```
+`[ec2-user@ip-172-31-19-92 globo_web_app]$ vim outputs.tf`
+``` tf
+output "aws_instance_public_dns" {
+  description = "Public DNS hostname of the EC2 instance"
+  value       = "http://${aws_instance.nginx1.public_dns}:${var.http_port}"
+}
+...
+```
+
 ### Applying the Updates
+``` console
+[ec2-user@ip-172-31-19-92 globo_web_app]$ terraform plan -out m5.tfplan
+...
+      ~ user_data                            = "cb0913cf765ab03a0e0efe30a565273bbb8826c4" -> "ccb34672460b6a9ae4871e7212579f51cd686b70" # forces replacement
+      + user_data_base64                     = (known after apply)
+...
+Plan: 1 to add, 1 to change, 1 to destroy.
+
+Changes to Outputs:
+  ~ aws_instance_public_dns = "ec2-54-196-70-138.compute-1.amazonaws.com" -> (known after apply)
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+Saved the plan to: m5.tfplan
+
+To perform exactly these actions, run the following command to apply:
+    terraform apply "m5.tfplan"
+[ec2-user@ip-172-31-19-92 globo_web_app]$ 
+```
+``` console
+[ec2-user@ip-172-31-19-92 globo_web_app]$ terraform apply m5.tfplan
+aws_instance.nginx1: Destroying... [id=i-08109ca1e270add39]
+aws_instance.nginx1: Still destroying... [id=i-08109ca1e270add39, 00m10s elapsed]
+aws_instance.nginx1: Still destroying... [id=i-08109ca1e270add39, 00m20s elapsed]
+aws_instance.nginx1: Still destroying... [id=i-08109ca1e270add39, 00m30s elapsed]
+aws_instance.nginx1: Still destroying... [id=i-08109ca1e270add39, 00m40s elapsed]
+aws_instance.nginx1: Still destroying... [id=i-08109ca1e270add39, 00m50s elapsed]
+aws_instance.nginx1: Still destroying... [id=i-08109ca1e270add39, 01m00s elapsed]
+aws_instance.nginx1: Still destroying... [id=i-08109ca1e270add39, 01m10s elapsed]
+aws_instance.nginx1: Destruction complete after 1m11s
+aws_vpc.app: Modifying... [id=vpc-0822023bc137ffbfd]
+aws_vpc.app: Modifications complete after 0s [id=vpc-0822023bc137ffbfd]
+aws_instance.nginx1: Creating...
+aws_instance.nginx1: Still creating... [00m10s elapsed]
+aws_instance.nginx1: Creation complete after 13s [id=i-032ff9181c6cc4e3b]
+
+Apply complete! Resources: 1 added, 1 changed, 1 destroyed.
+
+Outputs:
+
+aws_instance_public_dns = "http://ec2-100-30-238-205.compute-1.amazonaws.com:80"
+public_subnet_id = "subnet-05158e5b5e97065a5"
+vpc_id = "vpc-0822023bc137ffbfd"
+[ec2-user@ip-172-31-19-92 globo_web_app]$
+```
+Clickable Browser ipaddr: http://ec2-100-30-238-205.compute-1.amazonaws.com:80
 
 ## 6. Exploring Terraform State
 ### What's is Terraform State?
