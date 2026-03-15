@@ -487,13 +487,227 @@ Referenccing Collection Values
 - var.aws_instance__sizes.small  or var.aws_instance__sizes["small"]
 
 ### Adding Variables to the Configuration
+Ref: commands/m4_commands.sh
 
+**`variables.tf`**  
+`[ec2-user@ip-172-31-19-92 globo_web_app]$ vim variables.tf`
+``` tf
+variable "aws_region" {
+  description = "The AWS region to deploy resources in"
+  type        = string
+  default     = "us-east-1"
+}
 
+variable "vpc_cidr_block" {
+  description = "The CIDR block for the VPC"
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+variable "vpc_enable_dns_hostnames" {
+  description = "Enable DNS hostnames in the VPC"
+  type        = bool
+  default     = true
+}
+
+variable "vpc_subnet_cidr" {
+  description = "The CIDR block for the public subnet"
+  type        = string
+  default     = "10.0.0.0/24"
+}
+
+variable "map_public_ip_on_launch" {
+  description = "Whether to map public IPs on launch for the subnet"
+  type        = bool
+  default     = true
+}
+
+variable "http_port" {
+  description = "The HTTP port for the application"
+  type        = number
+}
+
+variable "ec2_instance_type" {
+  description = "The type of EC2 instance to launch"
+  type        = string
+}
+```
+main.tf
+``` tf
+provider "aws" {
+  region     = var.aws_region
+}
+...
+resource "aws_vpc" "app" {
+  cidr_block           = var.vpc_cidr_block
+  enable_dns_hostnames = var.vpc_enable_dns_hostnames
+}
+...
+resource "aws_subnet" "public_subnet1" {
+  cidr_block              = var.vpc_subnet_cidr
+  vpc_id                  = aws_vpc.app.id
+  map_public_ip_on_launch = var.map_public_ip_on_launch
+}
+...
+  ingress {
+    from_port   = var.http_port
+    to_port     = var.http_port
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+...
+resource "aws_instance" "nginx1" {
+  ami                         = nonsensitive(data.aws_ssm_parameter.amzn2_linux.value)
+  instance_type               = var.ec2_instance_type
+  subnet_id                   = aws_subnet.public_subnet1.id
+  vpc_security_group_ids      = [aws_security_group.nginx_sg.id]
+  user_data_replace_on_change = true
+```
 
 ### Output Values
+- Printed to terminal after apply
+- Stored in state data
+- Used by child modules
+
+Outputs Syntax, main.tf
+```
+output "name_label" {
+  value        = value
+  description  = "string"
+}
+```
+
+**`outputs.tf`**  
+`[ec2-user@ip-172-31-19-92 globo_web_app]$ vim outputs.tf`
+``` tf
+output "aws_instance_public_dns" {
+  value       = aws_instance.nginx1.public_dns
+  description = "Public DNS hostname of the EC2 instance"
+}
+
+output "vpc_id" {
+  value       = aws_vpc.app.id
+  description = "ID of the created VPC"
+}
+
+output "public_subnet_id" {
+  value       = aws_subnet.public_subnet1.id
+  description = "ID of the public subnet"
+}
+```
+
 ### Format and Variable
+- Fix formatting to match HCL spec
+  - `terraform fmt`
+- Check syntax and logic
+  - `terraform validate`
+
+
+Example if adding more space, in main.tf
+```
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version        = "~> 5.0"
+    }
+...
+```
+`terraform fmt -check` - to check for format
+``` console
+[ec2-user@ip-172-31-19-92 globo_web_app]$ terraform fmt -check
+main.tf
+```
+`terraform fmt` - to clecn up
+``` console
+[ec2-user@ip-172-31-19-92 globo_web_app]$ terraform fmt
+main.tf
+```
+Let intentionally introduce error at main.tf
+```
+resource "aws_vpc" "app" {
+  cidr_block           = var.vpc_cidr_block_dne
+  enable_dns_hostnames = var.vpc_enable_dns_hostnames
+}
+```
+
+**`terraform validate`**
+``` console
+[ec2-user@ip-172-31-19-92 globo_web_app]$ terraform validate
+╷
+│ Error: Reference to undeclared input variable
+│ 
+│   on main.tf line 38, in resource "aws_vpc" "app":
+│   38:   cidr_block           = var.vpc_cidr_block_dne
+│ 
+│ An input variable with the name "vpc_cidr_block_dne" has not been declared. This variable can be
+│ declared with a variable "vpc_cidr_block_dne" {} block.
+╵
+[ec2-user@ip-172-31-19-92 globo_web_app]$
+```
+After fixed it back
+``` console
+[ec2-user@ip-172-31-19-92 globo_web_app]$ terraform validate
+Success! The configuration is valid.
+```
+
 ### Supplying Variable Values
+Now that our configuration is ready and validated, we need to provide values for variables that don't have defaults. 
+
+- Default value - If you don't submit a value in any of those ways and no default is set, Terraform will prompt you for a value at runtime.
+- `-var` flag, `-var-file` flag - to specify either a variable in line or point to a file that has key value pairs for your variable values
+- `terraform.tfvars`, `terraform.tfvars.json` - automatically loaded from the working directory if it's found
+- `*.auto.tfvars`, `*.auto.tfvars.json` - Terraform will automatically find those files and load the values that are inside
+- `TF-VAR_` -  you can pass variable values using shell environment variables. To do so, you start the environment variable with TF_VAR_ and then the name label of the input variable. 
+
+Can you combine them? Yes, yes, you can.
+And what if you set the same variable in multiple ways?
+Well, Terraform follows an order of precedence with the last one winning.
+You can use this to strategically override values for testing. 
+
 ### Deploying the Upload Configuration
+Looking through our list of input variables, we need values for the HTTP port and EC2 instance type variables.
+
+```
+...
+variable "http_port" {
+  description = "The HTTP port for the application"
+  type        = number
+}
+
+variable "ec2_instance_type" {
+  description = "The type of EC2 instance to launch"
+  type        = string
+}
+```
+**`terraform.tfvars`**  
+`[ec2-user@ip-172-31-19-92 globo_web_app]$ vim terraform.tfvars`
+``` tf
+http_port = 80
+ec2_instance_type = "t3.micro"
+```
+> different from video
+``` console
+[ec2-user@ip-172-31-19-92 globo_web_app]$ terraform plan -out m4.tfplan
+data.aws_ssm_parameter.amzn2_linux: Reading...
+...
+Changes to Outputs:
+  + aws_instance_public_dns = (known after apply)
+  + public_subnet_id        = (known after apply)
+  + vpc_id                  = (known after apply)
+```
+``` console
+[ec2-user@ip-172-31-19-92 globo_web_app]$ terraform apply m4.tfplan
+...
+Apply complete! Resources: 7 added, 0 changed, 0 destroyed.
+Outputs:
+aws_instance_public_dns = "ec2-100-26-149-51.compute-1.amazonaws.com"
+public_subnet_id = "subnet-093d3778e1a9140ec"
+vpc_id = "vpc-0da49c10f750b657c"
+[ec2-user@ip-172-31-19-92 globo_web_app]$ 
+```
+> http://3.84.207.158/ not working
+
 
 ## 5. Using Expressions and Functions
 ### Globomantics Scenario
