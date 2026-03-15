@@ -98,8 +98,9 @@ Learn about installing Terraform and using the basic command line interfaces.
   - You can find the installer info for Terraform here:
     `https://developer.hashicorp.com/terraform/downloads`
 
-> Using Amazon Hand-On,  > EC2 > Instances > Connect
-> https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/concepts.html
+> Using Amazon Hand-On  
+> [Tutorial 2: Launch a test EC2 instance and connect to it]( https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/tutorial-launch-a-test-ec2-instance.html)  
+> Create key pair > ED25519 for Linux
 
 On Amazon Cloud Shell, Upload the ssh key first
 ``` console
@@ -115,7 +116,7 @@ antw@Mac-mini terraform-getting-started % ssh -i keyvm1.pem ubuntu@ec2-13-220-90
 ```
 
 Installing terraform, from `https://developer.hashicorp.com/terraform/downloads`  
-Amazon Linux
+⭐ Amazon Linux
 ``` console
 [ec2-user@ip-172-31-29-13 ~]$  sudo yum install -y yum-utils shadow-utils
 
@@ -146,16 +147,17 @@ Main commands:
   destroy       Destroy previously-created infrastructure
 ...
 ```
-get software 
+0️⃣  **`git clone https://github.com/ned1313/Getting-Started-Terraform.git`**
 ``` console
 [ec2-user@ip-172-31-29-13 ~]$ git clone https://github.com/ned1313/Getting-Started-Terraform.git
 ```
-##### Change the Prompt to be Shorter   
+
+#### Change the Prompt to be Shorter   
 To stop the path from being long when you ls, you can shorten your Bash prompt (PS1).
 - **Use \W instead of \w**: In your `~/.bashrc`, change PS1 to show only the current directory name, not the whole path.   Example: `export PS1='\W $ '`
 - **Use PROMPT_DIRTRIM**: To keep paths long but capped, add `PROMPT_DIRTRIM=1` to your `~/.bashrc`. 
-
-```
+⭐
+``` console
 $ cat ~/.bashrc
 $ sudo tee -a ~/.bashrc << EOF
 PROMPT_DIRTRIM=1
@@ -262,14 +264,14 @@ terraform init
 - Rerun when state backend, providers, or modules change
 
 ### Running Terraform Init
-[m3_commands.sh](commands/m3_commands.sh)
+1️⃣ [m3_commands.sh](commands/m3_commands.sh)  
 ``` console
 [ec2-user@ip-172-31-29-13 Getting-Started-Terraform]$ mkdir globo_web_app
 [ec2-user@ip-172-31-29-13 Getting-Started-Terraform]$ cp ./base_web_app/main.tf ./globo_web_app/main.tf
 [ec2-user@ip-172-31-29-13 Getting-Started-Terraform]$ ls
 CHANGELOG.md  LICENSE  README.md  base_web_app  commands  globo_web_app  m4_solution  m5_solution  m6_solution  s3_bucket_create
 ```
-`terraform init`
+2️⃣ **`terraform init`**
 ``` console
 [ec2-user@ip-172-31-29-13 Getting-Started-Terraform]$ cd globo_web_app
 
@@ -310,6 +312,7 @@ terraform plan
 - Creates an execution plan
   - Save with -out option
 
+3️⃣  **`aws configure`**
 ``` console
 [ec2-user@ip-172-31-29-13 globo_web_app]$ aws configure
 AWS Access Key ID [****************SVV3]: 
@@ -318,7 +321,7 @@ Default region name [None]:
 Default output format [None]: 
 ...
 ```
-run the plan command to see what Terraform will do.
+4️⃣  run the plan command to see what Terraform will do.
 ``` console
 [ec2-user@ip-172-31-29-13 globo_web_app]$  terraform plan -out m3.tfplan
 data.aws_ssm_parameter.amzn2_linux: Reading...
@@ -366,7 +369,7 @@ Do you want to perform these actions?
 Apply cancelled.
 ```
 
-Now use the plan file to apply the changes.
+5️⃣  Now use the plan file to apply the changes.
 ``` console
 [ec2-user@ip-172-31-29-13 globo_web_app]$  terraform apply m3.tfplan
 aws_vpc.app: Creating...
@@ -389,7 +392,7 @@ aws_instance.nginx1: Creation complete after 13s [id=i-0d9369e1a397cd6c3]
 
 Apply complete! Resources: 7 added, 0 changed, 0 destroyed.
 ```
-Grab the Public IP Address from the Instances (without name). In the browser: http://34.239.124.4/
+🤔 Grab the Public IP Address from the Instances (without name). In the browser: http://34.239.124.4/
 
 ### Destroying the Infrastructure
 terraform destroy
@@ -398,7 +401,7 @@ terraform destroy
 - Alias for `terraform apply -destroy`
 - Create plan with `terraform plan -destroy`
 
-If you are done, you can tear things down to save $$
+⭐ If you are done, you can tear things down to save $$
 ``` console
 [ec2-user@ip-172-31-29-13 globo_web_app]$  terraform destroy
 aws_vpc.app: Refreshing state... [id=vpc-0a7ef1988f9414c73]
@@ -418,8 +421,75 @@ Destroy complete! Resources: 7 destroyed.
 
 ## 4. Using Inputs and Outputs
 ### Globomantics Scenario
+Sally Sue is excited that you got the environment up so quickly, but the folks over in ops have some requests about how the environment is deployed. 
+
+Potential Improvements
+- Replace hard coaded values
+- Generate output of public DNS hostname
+- Generate outputs for VPC and subnets
+
 ### Input Variables
+Variable Syntax, `main.tf`
+```
+variable "name_label" {}
+
+variable "name_label" {
+  type         = value
+  description  = "string"
+  default      = value
+}
+```
+Example
+```
+variable "billing_tag" {}
+
+variable "aws_region" {
+  type         == string
+  description  = "Region to use for AWS resources"
+  default      = "us-east-1"
+}
+```
+Terraform Variable Reference
+- var.<name_label>
+- var.aws_region
+
+Terraform Data Types
+- Primitive: String, number, bool
+- Collection: List, set, map
+- Structural: Typle, object
+
+Data Type Examples, list
+```
+variable "aws_region" {
+  type         = list(string)
+  description  = "Region to use for AWS resources"
+  default      = ["us-east-1", "us-east-2", "us-west-1", "us-wesr-2"]
+}
+```
+Referenccing Collection Values
+- var.<name_label>[<element_number>]
+- var.aws_region[0]
+
+Data Type Examples, list
+```
+variable "aws_instance_size" {
+  type         = map(string)
+  description  = "Instance sizes to use in AWS"
+  default      = {
+    small  = "t3.micro"
+    medium = "m5.large"
+    large  = "m4-xlarge"
+  }
+}
+```
+Referenccing Collection Values
+- var.<name_label>.<key_name>  or  var.<name_label>["key_name"]
+- var.aws_instance__sizes.small  or var.aws_instance__sizes["small"]
+
 ### Adding Variables to the Configuration
+
+
+
 ### Output Values
 ### Format and Variable
 ### Supplying Variable Values
