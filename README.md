@@ -1266,6 +1266,16 @@ terraform destroy -auto-approve
 ```
 
 ### Next Steps
+The point of this course was to give you a solid foundation and enough knowledge to get up and running with Terraform. 
+
+The other courses in the learning path focus on different aspects of Terraform, and you have a chance to choose your own adventure. 
+I'd recommend starting with Terraform: Variables and Outputs. 
+We touched on both in this course, but we didn't even get into variable validation, creating complex data types or setting values as sensitive. 
+If you're interested in building reusable Terraform configurations, then the Modules course would be perfect for learning how to consume modules from the public registry and write your own. 
+
+If you're looking to dig deeper into the Terraform language, then the Terraform: Advanced HCL course is where you should go next. 
+You'll learn about using count and for_each meta‑arguments, building for expressions, and leveraging provider‑defined functions. 
+
 
 ---
  . . . . . . . . . . . . . . . . . . . [Go to Top :arrow_up:](#69)
