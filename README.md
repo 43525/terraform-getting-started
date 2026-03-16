@@ -985,6 +985,9 @@ aws_instance_public_dns = "http://ec2-100-30-238-205.compute-1.amazonaws.com:80"
 public_subnet_id = "subnet-05158e5b5e97065a5"
 vpc_id = "vpc-0822023bc137ffbfd"
 [ec2-user@ip-172-31-19-92 globo_web_app]$
+[ec2-user@ip-172-31-19-92 globo_web_app]$ ls
+locals.tf  main.tf    templates          terraform.tfvars
+m5.tfplan  output.tf  terraform.tfstate  variables.tf
 ```
 Clickable Browser ipaddr: http://ec2-100-30-238-205.compute-1.amazonaws.com:80  
 > Welcome to the dev website! Have a 🌮
