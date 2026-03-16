@@ -635,7 +635,7 @@ resource "aws_vpc" "app" {
 }
 ```
 
-**`terraform validate`**
+⭐ **`terraform validate`**
 ``` console
 [ec2-user@ip-172-31-19-92 globo_web_app]$ terraform validate
 ╷
@@ -710,7 +710,8 @@ public_subnet_id = "subnet-093d3778e1a9140ec"
 vpc_id = "vpc-0da49c10f750b657c"
 [ec2-user@ip-172-31-19-92 globo_web_app]$ 
 ```
-> http://3.84.207.158/ not working  
+> Browser: `http://ec2-100-26-149-51.compute-1.amazonaws.com/`  
+> Welcome to the website! Have a 🌮
 
   . . . . . . . . . . . . . . . . . . . [Go to Top :arrow_up:](#69)
 ###### module 5
@@ -1077,6 +1078,13 @@ Partial Configuration
   - terraform init -backend-config="backend-settings.txt"
 
 ### Globomantics Scenario and State Manipulation
+As the web app project picks up steam, John from operations would like to make sure that others can collaborate on the infrastructure and that the state data is safeguarded from data loss. 
+
+Storing it on your workstation is not meeting those requirements, so instead, you've agreed to move the state data to an S3 bucket. 
+John will provision and configure the bucket for you and provide you with the region, bucket name, and key to use. 
+It's up to you to update the configuration to support it and migrate the state data off your workstation. 
+You've also decided to use a partial configuration to support future environments. 
+
 State Data Migration
 - Use S3 bucket provided by Ops
 - Migrate existing state data
@@ -1084,14 +1092,20 @@ State Data Migration
 
 State Inspection Commands
 - Display all state data
-  - terraform show
+  - show will print the contents of state to the terminal in a human‑readable format. Add the ‑json flag to have the output be in JSON format instead.  
+  - `terraform show` 
 - List all resources and data sources
-  - terraform state list
+  - show you all the resources and data sources in state. The output will be the identifiers of each object.
+  - terraform state list 
 - List all attributes of a single object
-  - terraform state show ADDR
+  - Based on that output, you can run the terraform state show command along with the identifier of interest to see more information about that single object.
+  - terraform state show ADDR 
   - terraform state show aws_vps.main
 - Show outputs stored in state
+  - Without any arguments, it will print all the defined outputs to the terminal. You can add an output name to the command to only have that output value printed.
   - terraform output NAME
+
+In addition to the state commands, there are three block types that allow you to manipulate the contents of state.
 
 Moved Block, moved.tf
 ```
@@ -1118,13 +1132,15 @@ removed {
 }
 ```
 
-### Migrating State Data
+### 🤔  Migrating State Data
 ``` console
 [ec2-user@ip-172-31-29-4 globo_web_app]$ cd ..
 [ec2-user@ip-172-31-29-4 Getting-Started-Terraform]$ cd s3_bucket_create
-[ec2-user@ip-172-31-29-4 s3_bucket_create]$
+[ec2-user@ip-172-31-29-4 s3_bucket_create]$ ls
+main.tf  outputs.tf  terraform.tf  terraform.tfvars.example  variables.tf
 ```
-Initialize and apply the S3 bucket
+Initialize and apply the S3 bucket.  
+> tale note on bucket_name, and bucket_region.
 ``` console
 [ec2-user@ip-172-31-29-4 s3_bucket_create]$ terraform init
 
@@ -1132,11 +1148,27 @@ Initialize and apply the S3 bucket
 
 [ec2-user@ip-172-31-29-4 s3_bucket_create]$ terraform apply bucket.tfplan
 ...
-bucket_name = "taco-wagon20260315162550405300000001"
+bucket_name = "taco-wagon20260316085944190600000001"
 bucket_region = "us-east-1"
-[ec2-user@ip-172-31-29-4 s3_bucket_create]$ 
+[ec2-user@ip-172-31-29-4 s3_bucket_create]$ ls
+bucket.tfplan  outputs.tf    terraform.tfstate         variables.tf
+main.tf        terraform.tf  terraform.tfvars.example
 ```
-`vim terraform.tf` , cut and paste from main.tf. And add bucket "s3"
+🤔 We get back two outputs, the bucket_name and the region. We'll use that information to set up the remote back end. 
+
+Now that we're adding more to the terraform block, perhaps we should move it to its own file. 
+It's pretty common to see a terraform.tf file in most configurations. 
+So I'm going to create a new terraform.tf file and copy the terraform block out of the main.tf file. 
+
+Now we can add the *back‑end block* inside of the terraform block. 
+The type of back end is s3, and inside the block, I'll set the bucket name to the output from the configuration. 
+I'll copy and paste that value, and now I'm going to set the region to us‑east‑1.
+The other value I can set is the key, but we may want to use this configuration for multiple environments, so we can leave that key unset here and pass the value during initialization. 
+
+The block is all set, but I'm not quite ready to use it, so I'm going to comment it out for now, and before we migrate the state, let's try out some of the state commands.
+
+`cd ../globo_web_app`  
+`vim terraform.tf` , cut and paste from main.tf. And add these two outputs to bucket "s3". Commented.
 ``` tf
 terraform {
   required_providers {
@@ -1145,14 +1177,14 @@ terraform {
       version = "~> 5.0"
     }
   }
-  # ??? need video again
+
   #backend "s3" {
-  #  bucket = "taco-wagon20260315162550405300000001"
+  #  bucket = "taco-wagon20260316085944190600000001"
   #  region = "us-east-1"
   #}
 }
 ```
-vim main.tf
+`vim main.tf`. Can delete these commented
 ```
 #terraform {
 #  required_providers {
@@ -1163,9 +1195,25 @@ vim main.tf
 #  }
 #}
 ```
+##### To navigate
+`[ec2-user@ip-172-31-28-65 globo_web_app]$ vim terraform.tfstate`
+``` tf
+{
+  "version": 4,
+  "terraform_version": "1.14.7",
+  "serial": 8,
+  "lineage": "c0f900ca-c6fb-07b5-286d-5fcb7759ad21",
+  "outputs": {
+    "aws_instance_public_dns": {
+      "value": "ec2-54-224-136-192.compute-1.amazonaws.com",
+      "type": "string"
+    },
+...
+```
 
 `cd ../globo_web_app`  
-`terraform show`
+`terraform show`, 
+Well, that is certainly easier to read than the JSON data, but it's also a little overwhelming. 
 ``` console
 [ec2-user@ip-172-31-29-4 s3_bucket_create]$ cd ../globo_web_app
 [ec2-user@ip-172-31-29-4 globo_web_app]$ terraform show
@@ -1176,7 +1224,7 @@ aws_instance_public_dns = "http://ec2-3-239-246-204.compute-1.amazonaws.com:80"
 public_subnet_id = "subnet-068132660411cf68e"
 vpc_id = "vpc-04a91dea284a7f04d"
 ```
-`terraform state list`
+`terraform state list` to get a list of all the resource and data source identifiers. 
 ``` console
 [ec2-user@ip-172-31-29-4 globo_web_app]$ terraform state list
 data.aws_ssm_parameter.amzn2_linux
@@ -1187,13 +1235,16 @@ aws_route_table_association.app_subnet1
 aws_security_group.nginx_sg
 aws_subnet.public_subnet1
 aws_vpc.app
+```
+The object we're interested in is aws_instance.nginx1. So we can now run terraform state show and copy and paste that address from the list. 
+It's still a lot of information, but definitely better than trying to parse a ton of JSON.
+``` console
 [ec2-user@ip-172-31-29-4 globo_web_app]$ terraform state show aws_instance.nginx1
 ```
-Migrating
 
-`cd ../s3_bucket_create` `vim terraform.tf` , uncommenting bucket "s3"
+##### To migrate our state data
 
-`cd ../globo_web_app` ?? 
+`cd ../globo_web_app` `vim terraform.tf` , uncommenting bucket "s3"
 ``` tf
 terraform {
   required_providers {
@@ -1204,13 +1255,14 @@ terraform {
   }
 
   backend "s3" {
-    bucket = "taco-wagon20260315162550405300000001"
+    bucket = "taco-wagon20260316085944190600000001"
     region = "us-east-1"
   }
 }
 ```
-`cd ../globo_web_app`  
-update the globo_web_app backend to use the S3 bucket
+
+Update the globo_web_app backend to use the S3 bucket.  
+Since we didn't specify a value for the key argument in the backend block, I'll add in the flag ‑backend‑config=, and then inside of there, put the key value pair, which is "key=dev.tfstate". 
 ``` console
 [ec2-user@ip-172-31-29-4 globo_web_app]$ terraform init -backend-config="key=dev.tfstate"
 Initializing the backend...
@@ -1241,29 +1293,45 @@ commands will detect it and remind you to do so if necessary.
 [ec2-user@ip-172-31-29-4 globo_web_app]$ 
 ```
 To confirm
-- terraform.tfstate will be empty
-- terraform show, we[ll get valid response
--  terraform plan
+- `terraform.tfstate` will be empty
+  ``` console
+  [ec2-user@ip-172-31-28-65 globo_web_app]$ cat terraform.tfstate
+  [ec2-user@ip-172-31-28-65 globo_web_app]$ 
+  ```
+- `terraform show`, we'll get valid response
 
 ``` console
-[ec2-user@ip-172-31-29-4 globo_web_app]$ terraform plan
+[ec2-user@ip-172-31-28-65 globo_web_app]$  terraform show
+...
+Outputs:
+
+aws_instance_public_dns = "ec2-54-224-136-192.compute-1.amazonaws.com"
+public_subnet_id = "subnet-0f9f2dafa868a1884"
+vpc_id = "vpc-007817db769066e85"
+```
+> note on the aws_instance_public_dns.
+
+`terraform plan`
+``` console
+[ec2-user@ip-172-31-28-65 globo_web_app]$ terraform plan
 ...
 No changes. Your infrastructure matches the configuration.
 
-Terraform has compared your real infrastructure against your configuration and found no differences,
-so no changes are needed.
+Terraform has compared your real infrastructure against your configuration and found no
+differences, so no changes are needed.
+[ec2-user@ip-172-31-28-65 globo_web_app]$ 
 ```
+Browser: http://ec2-54-224-136-192.compute-1.amazonaws.com/  
+`Welcome to the website! Have a 🌮`
 
-Tear down the deployments to save costs  
-Globo Web App first  
-```
-terraform destroy -auto-approve
-```
-Then the S3 bucket
-```
-cd ../s3_bucket_create
-terraform destroy -auto-approve
-```
+##### Tear down the deployments to save costs  
+Globo Web App 
+- **`terraform destroy -auto-approve`**
+
+the S3 bucket
+- `cd ../s3_bucket_create` 
+  `terraform destroy -auto-approve`
+
 
 ### Next Steps
 The point of this course was to give you a solid foundation and enough knowledge to get up and running with Terraform. 
