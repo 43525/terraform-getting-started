@@ -907,7 +907,7 @@ sudo cat > /usr/share/nginx/html/index.html << 'WEBSITE'
 </html>
 WEBSITE
 ```
-main.tf
+`cd .. ` && `vim main.tf`
 ``` tf
 ...
 resource "aws_vpc" "app" {
@@ -918,7 +918,6 @@ resource "aws_vpc" "app" {
 }
 ...
   user_data_replace_on_change = true
- # tags                        = merge(local.common_tags, { Name = lower("${local.naming_prefix}-nginx1") })
 
   user_data = templatefile("./templates/startup_script.tpl", {
     environment = var.environment
@@ -926,6 +925,7 @@ resource "aws_vpc" "app" {
 
 }
 ```
+Check the function
 ``` console
 [ec2-user@ip-172-31-19-92 globo_web_app]$ terraform console
 > merge(local.common_tags, { Name = lower("${local.prefix}-vpc") })
@@ -936,9 +936,9 @@ resource "aws_vpc" "app" {
   "Name" = "tacowagon-dev-vpc"
   "Project" = "tacowagon"
 }
->  
+>  exit
 ```
-`[ec2-user@ip-172-31-19-92 globo_web_app]$ vim outputs.tf`
+`vim outputs.tf` edit the DNS value
 ``` tf
 output "aws_instance_public_dns" {
   description = "Public DNS hostname of the EC2 instance"
@@ -970,14 +970,7 @@ To perform exactly these actions, run the following command to apply:
 ``` console
 [ec2-user@ip-172-31-19-92 globo_web_app]$ terraform apply m5.tfplan
 aws_instance.nginx1: Destroying... [id=i-08109ca1e270add39]
-aws_instance.nginx1: Still destroying... [id=i-08109ca1e270add39, 00m10s elapsed]
-aws_instance.nginx1: Still destroying... [id=i-08109ca1e270add39, 00m20s elapsed]
-aws_instance.nginx1: Still destroying... [id=i-08109ca1e270add39, 00m30s elapsed]
-aws_instance.nginx1: Still destroying... [id=i-08109ca1e270add39, 00m40s elapsed]
-aws_instance.nginx1: Still destroying... [id=i-08109ca1e270add39, 00m50s elapsed]
-aws_instance.nginx1: Still destroying... [id=i-08109ca1e270add39, 01m00s elapsed]
-aws_instance.nginx1: Still destroying... [id=i-08109ca1e270add39, 01m10s elapsed]
-aws_instance.nginx1: Destruction complete after 1m11s
+...
 aws_vpc.app: Modifying... [id=vpc-0822023bc137ffbfd]
 aws_vpc.app: Modifications complete after 0s [id=vpc-0822023bc137ffbfd]
 aws_instance.nginx1: Creating...
@@ -1184,7 +1177,7 @@ terraform {
   #}
 }
 ```
-`vim main.tf`. Can delete these commented
+`vim main.tf`. Can commented off, or delete these.
 ```
 #terraform {
 #  required_providers {
@@ -1243,6 +1236,9 @@ It's still a lot of information, but definitely better than trying to parse a to
 ```
 
 ##### To migrate our state data
+The process of migrating. 
+First, update your configuration with the necessary backend block, which we've already done, and then you run terraform init. 
+Start by uncommenting that backend block so we can make use of it. 
 
 `cd ../globo_web_app` `vim terraform.tf` , uncommenting bucket "s3"
 ``` tf
