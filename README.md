@@ -1124,7 +1124,7 @@ removed {
 [ec2-user@ip-172-31-29-4 Getting-Started-Terraform]$ cd s3_bucket_create
 [ec2-user@ip-172-31-29-4 s3_bucket_create]$
 ```
-# Initialize and apply the S3 bucket
+Initialize and apply the S3 bucket
 ``` console
 [ec2-user@ip-172-31-29-4 s3_bucket_create]$ terraform init
 
