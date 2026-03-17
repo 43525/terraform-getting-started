@@ -1123,13 +1123,16 @@ aws_instance_public_dns = "http://ec2-100-30-238-205.compute-1.amazonaws.com:80"
 public_subnet_id = "subnet-05158e5b5e97065a5"
 vpc_id = "vpc-0822023bc137ffbfd"
 [ec2-user@ip-172-31-19-92 globo_web_app]$
+```
+Clickable Browser ipaddr: http://ec2-100-30-238-205.compute-1.amazonaws.com:80  
+> Welcome to the dev website! Have a 🌮
+
+``` console
 [ec2-user@ip-172-31-19-92 globo_web_app]$ ls -a
 .           .terraform.lock.hcl  m4.tfplan  outputs.tf         terraform.tfstate.backup
 ..          locals.tf            m5.tfplan  templates          terraform.tfvars
 .terraform  m3.tfplan            main.tf    terraform.tfstate  variables.tf
 ```
-Clickable Browser ipaddr: http://ec2-100-30-238-205.compute-1.amazonaws.com:80  
-> Welcome to the dev website! Have a 🌮
 
  . . . . . . . . . . . . . . . . . . . [Go to Top :arrow_up:](#69)
 ###### module 6
@@ -1466,6 +1469,13 @@ differences, so no changes are needed.
 ```
 Browser: http://ec2-54-224-136-192.compute-1.amazonaws.com/  
 `Welcome to the website! Have a 🌮`
+
+``` console
+[ec2-user@ip-172-31-17-96 globo_web_app]$ ls -a
+.           .terraform.lock.hcl  m4.tfplan  outputs.tf    terraform.tfstate         variables.tf
+..          locals.tf            m5.tfplan  templates     terraform.tfstate.backup
+.terraform  m3.tfplan            main.tf    terraform.tf  terraform.tfvars
+```
 
 > #### If all done, and to quit.
 Tear down the deployments to save costs
