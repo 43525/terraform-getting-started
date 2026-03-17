@@ -234,13 +234,14 @@ Other Block Types
 - Local
 
 ### Reviewing the Base Configuration
-```
+``` console
 adminuser@MyVm:~/Getting-Started-Terraform$ cd base_web_app
 adminuser@MyVm:~/.../base_web_app$ ls
 main.tf
 ```
 [main.tf](base_web_app/main.tf)
 ``` tf
+
 terraform {
   required_providers {
     aws = {
@@ -250,14 +251,108 @@ terraform {
   }
 }
 
-....
+######### PROVIDERS #########
+provider "aws" {
+  region     = "us-east-1"
+}
+
+######### DATA #########
+data "aws_ssm_parameter" "amzn2_linux" {
+  name = "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+}
+
+######### RESOURCES #########
+# NETWORKING #
+resource "aws_vpc" "app" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+
+}
+
+resource "aws_internet_gateway" "app" {
+  vpc_id = aws_vpc.app.id
+
+}
+
+resource "aws_subnet" "public_subnet1" {
+  cidr_block              = "10.0.0.0/24"
+  vpc_id                  = aws_vpc.app.id
+  map_public_ip_on_launch = true
+}
+
+# ROUTING #
+resource "aws_route_table" "app" {
+  vpc_id = aws_vpc.app.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.app.id
+  }
+}
+
+resource "aws_route_table_association" "app_subnet1" {
+  subnet_id      = aws_subnet.public_subnet1.id
+  route_table_id = aws_route_table.app.id
+}
+
+# SECURITY GROUPS #
+# Nginx security group 
+resource "aws_security_group" "nginx_sg" {
+  name   = "nginx_sg"
+  vpc_id = aws_vpc.app.id
+
+  # HTTP access from anywhere
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # outbound internet access
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# INSTANCES #
+resource "aws_instance" "nginx1" {
+  ami                    = nonsensitive(data.aws_ssm_parameter.amzn2_linux.value)
+  instance_type          = "t3.micro"
+  subnet_id              = aws_subnet.public_subnet1.id
+  vpc_security_group_ids = [aws_security_group.nginx_sg.id]
+  user_data_replace_on_change = true
+
+  user_data = <<EOF
+#! /bin/bash
+sudo amazon-linux-extras install -y nginx1
+sudo service nginx start
+sudo rm /usr/share/nginx/html/index.html
+sudo cat > /usr/share/nginx/html/index.html << 'WEBSITE'
+<html>
+<head>
+    <title>Taco Team Server</title>
+</head>
+<body style="background-color:#1F778D">
+    <p style="text-align: center;">
+        <span style="color:#FFFFFF;">
+            <span style="font-size:100px;">Welcome to the website! Have a &#127790;</span>
+        </span>
+    </p>
+</body>
+</html>
+WEBSITE
+EOF
+
+}
 ```
 
  . . . . . . . . . . . . . . . . . . . [Go to Top :arrow_up:](#69)
 ###### module 3
 ## Deploy Infrastructure with Terraform
-
- cd ~/Getting-Started-Terraform/base_web_app 
 
 ### Initializing the Configuration
 terraform init
@@ -269,6 +364,12 @@ terraform init
 
 ### Running Terraform Init
 1️⃣ [m3_commands.sh](commands/m3_commands.sh)  
+
+```
+cd ~/Getting-Started-Terraform
+mkdir globo_web_app
+cp ./base_web_app/main.tf ./globo_web_app/main.tf
+```
 ``` console
 [ec2-user@ip-172-31-29-13 Getting-Started-Terraform]$ mkdir globo_web_app
 [ec2-user@ip-172-31-29-13 Getting-Started-Terraform]$ cp ./base_web_app/main.tf ./globo_web_app/main.tf
@@ -316,6 +417,8 @@ terraform plan
   - Save with -out option
 
 3️⃣  **`aws configure`**
+
+> get the keys from AWS Sandbox
 ``` console
 [ec2-user@ip-172-31-29-13 globo_web_app]$ aws configure
 AWS Access Key ID [****************SVV3]: 
@@ -491,10 +594,9 @@ Referenccing Collection Values
 - var.aws_instance__sizes.small  or var.aws_instance__sizes["small"]
 
 ### Adding Variables to the Configuration
-Ref: commands/m4_commands.sh
+Ref: [m4_commands.sh](commands/m4_commands.sh)
 
-**`variables.tf`**  
-`[ec2-user@ip-172-31-19-92 globo_web_app]$ vim variables.tf`
+`vim` **`variables.tf`**  
 ``` tf
 variable "aws_region" {
   description = "The AWS region to deploy resources in"
@@ -581,8 +683,7 @@ output "name_label" {
 }
 ```
 
-**`outputs.tf`**  
-`[ec2-user@ip-172-31-19-92 globo_web_app]$ vim outputs.tf`
+`vim` **`outputs.tf`**  
 ``` tf
 output "aws_instance_public_dns" {
   value       = aws_instance.nginx1.public_dns
@@ -684,8 +785,8 @@ variable "ec2_instance_type" {
   type        = string
 }
 ```
-**`terraform.tfvars`**  
-`[ec2-user@ip-172-31-19-92 globo_web_app]$ vim terraform.tfvars`
+
+`vim` **`terraform.tfvars`**  
 ``` tf
 http_port = 80
 ec2_instance_type = "t3.micro"
@@ -764,8 +865,10 @@ Variables to Create
 - Environment
 - Billing code
 
+Ref: [m5_commands.sh](commands/m5_commands.sh)  
+
 Added these variables into the configuration  
-`[ec2-user@ip-172-31-19-92 globo_web_app]$ vim variables.tf`
+`vim variables.tf`
 ``` tf
 ...
 variable "company_name" {
@@ -790,7 +893,7 @@ variable "billing_code" {
 }
 ```
 
-Interpolation, `${var.project}-${var.environment}`  
+##### Interpolation, `${var.project}-${var.environment}`  
 Interpolation is a way to ask Terraform to evaluate an expression and turn the result into a string. 
 We already have quotes here indicating that we're constructing a string. 
 
@@ -804,7 +907,7 @@ Now we've created a string from our two variables that is of the form project‑
 With our common_tags local value defined, let's apply these tags to our resources. 
 
 Added these variable to local.tf   
-`[ec2-user@ip-172-31-19-92 globo_web_app]$ vim locals.tf`
+`vim locals.tf`
 ``` tf
 locals {
   common_tags = {
@@ -817,9 +920,9 @@ locals {
 }
 ```
 
-Added into main.tf  
-`[ec2-user@ip-172-31-19-92 globo_web_app]$ vim main.tf`
-```
+Update main.tf  
+`vim main.tf`
+``` tf
 # NETWORKING #
 resource "aws_vpc" "app" {
   cidr_block           = var.vpc_cidr_block
@@ -831,7 +934,7 @@ resource "aws_vpc" "app" {
 Note that the aws_route_table_association resource doesn't support tags, so skip that one. 
 
 Add variables into terraform.tfvars  
-`[ec2-user@ip-172-31-19-92 globo_web_app]$ vim terraform.tfvars`
+`vim terraform.tfvars`
 ``` tf
 http_port         = 80
 ec2_instance_type = "t3.micro"
@@ -863,7 +966,7 @@ Function to Use (for Globomantics)
 
 ### Testing Functions with Terraform Console
 **`terraform console`**, exit by ctrl-d
-```
+``` console
 [ec2-user@ip-172-31-19-92 globo_web_app]$ terraform console
 > min(4,5,16)
 4
@@ -882,12 +985,12 @@ Function to Use (for Globomantics)
 
 ### Adding Functions to the Configuration
 ``` console
-[ec2-user@ip-172-31-19-92 globo_web_app]$ mkdir templates
-[ec2-user@ip-172-31-19-92 globo_web_app]$ cd templates
-[ec2-user@ip-172-31-19-92 templates]$ vim startup_script.tpl
+mkdir templates
+cd templates
+vim startup_script.tpl
 ```
-startup_script, moves from the man.tf, but add in te placeholder
-``` bash
+startup_script, moves from the man.tf, and add the placeholder
+``` sh
 #! /bin/bash
 sudo amazon-linux-extras install -y nginx1
 sudo service nginx start
@@ -1129,6 +1232,9 @@ removed {
 ```
 
 ### 🤔  Migrating State Data
+Ref: [m6_commands.sh](commands/m6_commands.sh)  
+
+`cd ../s3_bucket_create`
 ``` console
 [ec2-user@ip-172-31-29-4 globo_web_app]$ cd ..
 [ec2-user@ip-172-31-29-4 Getting-Started-Terraform]$ cd s3_bucket_create
@@ -1136,7 +1242,7 @@ removed {
 main.tf  outputs.tf  terraform.tf  terraform.tfvars.example  variables.tf
 ```
 Initialize and apply the S3 bucket.  
-> tale note on bucket_name, and bucket_region.
+> Take note on bucket_name, and bucket_region.
 ``` console
 [ec2-user@ip-172-31-29-4 s3_bucket_create]$ terraform init
 
@@ -1150,7 +1256,7 @@ bucket_region = "us-east-1"
 bucket.tfplan  outputs.tf    terraform.tfstate         variables.tf
 main.tf        terraform.tf  terraform.tfvars.example
 ```
-🤔 We get back two outputs, the bucket_name and the region. We'll use that information to set up the remote back end. 
+🤔 We'll get back two outputs, the bucket_name and the region. We'll use that information to set up the remote back end. 
 
 Now that we're adding more to the terraform block, perhaps we should move it to its own file. 
 It's pretty common to see a terraform.tf file in most configurations. 
@@ -1191,8 +1297,9 @@ terraform {
 #  }
 #}
 ```
-##### To navigate
-`[ec2-user@ip-172-31-28-65 globo_web_app]$ vim terraform.tfstate`
+##### To navigate the data state
+From vscode  
+`terraform-getting-started/globo_web_app/terraform.tfstate`
 ``` tf
 {
   "version": 4,
@@ -1207,8 +1314,7 @@ terraform {
 ...
 ```
 
-`cd ../globo_web_app`  
-`terraform show`, 
+`cd ../globo_web_app` `terraform show`   
 Well, that is certainly easier to read than the JSON data, but it's also a little overwhelming. 
 ``` console
 [ec2-user@ip-172-31-29-4 s3_bucket_create]$ cd ../globo_web_app
@@ -1261,7 +1367,9 @@ terraform {
 ```
 
 Update the globo_web_app backend to use the S3 bucket.  
-Since we didn't specify a value for the key argument in the backend block, I'll add in the flag ‑backend‑config=, and then inside of there, put the key value pair, which is "key=dev.tfstate". 
+Since we didn't specify a value for the key argument in the backend block, I'll add in the flag ‑backend‑config=, and then inside of there, put the key value pair, which is "key=dev.tfstate".
+
+`terraform init -backend-config="key=dev.tfstate"`
 ``` console
 [ec2-user@ip-172-31-29-4 globo_web_app]$ terraform init -backend-config="key=dev.tfstate"
 Initializing the backend...
@@ -1323,7 +1431,9 @@ differences, so no changes are needed.
 Browser: http://ec2-54-224-136-192.compute-1.amazonaws.com/  
 `Welcome to the website! Have a 🌮`
 
-##### Tear down the deployments to save costs  
+> #### If all done, and to quit.
+Tear down the deployments to save costs
+
 Globo Web App 
 - **`terraform destroy -auto-approve`**
 
