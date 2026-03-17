@@ -104,17 +104,17 @@ Learn about installing Terraform and using the basic command line interfaces.
 > 2. EC2 > Instances > Launch Instances > Name: `My Vm1` > Amazon Linux >Key Pair: keyvm1 > Launch
 > 3. Click the instance (i-076f3edbde4bb4283) > Connect > ssh ...
 
-On Amazon Cloud Shell, Upload the ssh key first
+If using the Amazon Cloud Shell. Upload the ssh key.
 ``` console
 $ chmod 400 keyvm1.pem 
 $ ssh -i keyvm1.pem ubuntu@ec2-13-220-90-17.compute-1.amazonaws.com
 ubuntu@ip-172-31-27-35:~$ 
 ```
-On my mac, but on next difficult to sudo yum 
+On my mac
 ``` console
-antw@Mac-mini terraform-getting-started % mv ~/Downloads/*.pem .
-antw@Mac-mini terraform-getting-started % chmod 400 keyvm1.pem 
-antw@Mac-mini terraform-getting-started % ssh -i keyvm1.pem ubuntu@ec2-13-220-90-17.compute-1.amazonaws.com
+antw@Mac-mini 2025gen %  mv ~/Downloads/*.pem .
+antw@Mac-mini 2025gen %  chmod 400 keyvm1.pem 
+antw@Mac-mini 2025gen %  ssh -i keyvm1.pem ubuntu@ec2-13-220-90-17.compute-1.amazonaws.com
 ```
 
 Installing terraform, from `https://developer.hashicorp.com/terraform/downloads`  
@@ -497,6 +497,10 @@ aws_instance.nginx1: Creation complete after 13s [id=i-0d9369e1a397cd6c3]
 
 Apply complete! Resources: 7 added, 0 changed, 0 destroyed.
 ```
+``` console
+[ec2-user@ip-172-31-17-96 globo_web_app]$ ls -a
+.  ..  .terraform  .terraform.lock.hcl  m3.tfplan  main.tf  terraform.tfstate
+```
 🤔 Grab the Public IP Address from the Instances (without name). In the browser: http://34.239.124.4/
 
 ### Destroying the Infrastructure
@@ -523,6 +527,23 @@ Do you really want to destroy all resources?
 Destroy complete! Resources: 7 destroyed.
 [ec2-user@ip-172-31-29-13 globo_web_app]$
 ```
+
+``` console
+[ec2-user@ip-172-31-17-96 globo_web_app]$ ls -a
+.   .terraform           m3.tfplan  terraform.tfstate
+..  .terraform.lock.hcl  main.tf    terraform.tfstate.backup
+[ec2-user@ip-172-31-17-96 globo_web_app]$ cat terraform.tfstate
+{
+  "version": 4,
+  "terraform_version": "1.14.7",
+  "serial": 17,
+  "lineage": "25a7af69-7960-b8a3-fb67-f9eea4ce7c5e",
+  "outputs": {},
+  "resources": [],
+  "check_results": null
+}
+```
+
  . . . . . . . . . . . . . . . . . . . [Go to Top :arrow_up:](#69)
 ###### module 4
 ## Using Inputs and Outputs
@@ -595,7 +616,8 @@ Referenccing Collection Values
 ### Adding Variables to the Configuration
 Ref: [m4_commands.sh](commands/m4_commands.sh)
 
-`vim` **`variables.tf`**  
+**`variables.tf`**  
+`[ec2-user@ip-172-31-19-92 globo_web_app]$ vim variables.tf`
 ``` tf
 variable "aws_region" {
   description = "The AWS region to deploy resources in"
@@ -674,7 +696,7 @@ resource "aws_instance" "nginx1" {
 - Stored in state data
 - Used by child modules
 
-Outputs Syntax, main.tf
+Outputs Syntax
 ```
 output "name_label" {
   value        = value
@@ -812,6 +834,20 @@ vpc_id = "vpc-0da49c10f750b657c"
 ```
 > Browser: `http://ec2-100-26-149-51.compute-1.amazonaws.com/`  
 > Welcome to the website! Have a 🌮
+
+``` console
+[ec2-user@ip-172-31-17-96 globo_web_app]$ ls -a
+.   .terraform           m3.tfplan  main.tf     terraform.tfstate         terraform.tfvars
+..  .terraform.lock.hcl  m4.tfplan  outputs.tf  terraform.tfstate.backup  variables.tf
+[ec2-user@ip-172-31-17-96 globo_web_app]$ cat terraform.tfstate
+{
+  "version": 4,
+  "terraform_version": "1.14.7",
+  "serial": 25,
+  "lineage": "25a7af69-7960-b8a3-fb67-f9eea4ce7c5e",
+  "outputs": {
+ ...
+```
 
   . . . . . . . . . . . . . . . . . . . [Go to Top :arrow_up:](#69)
 ###### module 5
@@ -1030,7 +1066,7 @@ resource "aws_vpc" "app" {
 Check the function
 ``` console
 [ec2-user@ip-172-31-19-92 globo_web_app]$ terraform console
-> merge(local.common_tags, { Name = lower("${local.prefix}-vpc") })
+> merge(local.common_tags, { Name = lower("${local.naming_prefix}-vpc") })
 {
   "BillingCode" = "8675309"
   "Company" = "Globomantics"
@@ -1087,9 +1123,10 @@ aws_instance_public_dns = "http://ec2-100-30-238-205.compute-1.amazonaws.com:80"
 public_subnet_id = "subnet-05158e5b5e97065a5"
 vpc_id = "vpc-0822023bc137ffbfd"
 [ec2-user@ip-172-31-19-92 globo_web_app]$
-[ec2-user@ip-172-31-19-92 globo_web_app]$ ls
-locals.tf  main.tf    templates          terraform.tfvars
-m5.tfplan  output.tf  terraform.tfstate  variables.tf
+[ec2-user@ip-172-31-19-92 globo_web_app]$ ls -a
+.           .terraform.lock.hcl  m4.tfplan  outputs.tf         terraform.tfstate.backup
+..          locals.tf            m5.tfplan  templates          terraform.tfvars
+.terraform  m3.tfplan            main.tf    terraform.tfstate  variables.tf
 ```
 Clickable Browser ipaddr: http://ec2-100-30-238-205.compute-1.amazonaws.com:80  
 > Welcome to the dev website! Have a 🌮
