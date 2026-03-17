@@ -239,9 +239,8 @@ adminuser@MyVm:~/Getting-Started-Terraform$ cd base_web_app
 adminuser@MyVm:~/.../base_web_app$ ls
 main.tf
 ```
-[main.tf](base_web_app/main.tf)
+base_web_app/main.tf (removed uncessary comments)
 ``` tf
-
 terraform {
   required_providers {
     aws = {
